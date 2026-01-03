@@ -1,17 +1,23 @@
+#![allow(dead_code, unused)]
+
 use iced::widget::{text, row, responsive, container};
 use iced::widget::pane_grid::{self, PaneGrid, Axis};
 use iced::{Element, Fill};
 
-#[derive(Debug, Clone, Copy)]
+use crate::filetree::{self, FileTree};
+
+#[derive(Debug, Clone)]
 pub enum Message {
     PaneClicked(pane_grid::Pane),
     PaneResized(pane_grid::ResizeEvent),
+    FiletreeMessage(filetree::Message),
 }
 
 pub struct Layout {
     panes: pane_grid::State<Pane>,
     focus: Option<pane_grid::Pane>,
     menu_open: bool,
+    filetree: FileTree,
 }
 
 #[derive(Clone, Copy)]
@@ -36,6 +42,7 @@ impl Layout {
             panes,
             focus: None,
             menu_open,
+            filetree: FileTree::new(),
         }
     }
 
@@ -49,6 +56,7 @@ impl Layout {
                     self.panes.resize(split, ratio);
                 }
             }
+            Message::FiletreeMessage(message) => { self.filetree.update(message) },
         }
     }
 
@@ -69,7 +77,7 @@ impl Layout {
 
             pane_grid::Content::new(responsive(move |_| {
                 if pane.id == 0 {
-                    content1()
+                    self.filetree.view().map(Message::FiletreeMessage)
                 }
                 else {
                     content2()

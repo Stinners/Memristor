@@ -6,21 +6,20 @@ use std::ffi::OsString;
 use std::fs;
 use std::path::{Path, PathBuf};
 
-use iced::{Element};
-use iced::widget::{row, Column, text};
+use iced::{Element, Padding, Length};
+use iced::widget::{row, Column, text, container, mouse_area};
 use thiserror::Error;
 
 pub struct FileTree {
     root: Option<FsDir>,
-    focus_id: Option<String>
+    focus_path: Option<String>
 }
 
 #[derive(Debug, Clone)]
-pub enum FileTreeMessage {
+pub enum Message {
     OpenDir(PathBuf),
-    SetFocus(String),
     ToggleExpandDir(String),
-    OpenFile(String),
+    OpenFile(PathBuf),
 }
 
 // TODO handle invalid strings gracefully
@@ -31,20 +30,32 @@ fn pathbuf_to_string(buf: &PathBuf) -> String {
 }
 
 
-impl FileTree {
-    fn new() -> Self {
+impl<'a> FileTree {
+    pub fn new() -> Self {
+        let test_dir = PathBuf::from("./test/test_fs/populated");
+        let fs_dir = read_filesystem(&test_dir).unwrap();
         FileTree {
-            root: None,
-            focus_id: None,
+            root: Some(fs_dir),
+            focus_path: None,
         }
     }
 
-    pub fn update(&mut self, message: FileTreeMessage) {
-        unimplemented!()
+
+    pub fn update(&mut self, message: Message) { 
+        match message {
+            Message::ToggleExpandDir(id) => {
+                self.root.as_mut().map(|fs_dir| fs_dir.toggle_expanded(id));
+            },
+            Message::OpenFile(filepath) => { 
+                todo!()
+            }
+            _ => { todo!() }
+        }
     }
 
+
     // Impliment the view as a collection of nested Columns
-    pub fn view(&self) -> Element<'_, FileTreeMessage> {
+    pub fn view(&self) -> Element<'_, Message> {
         // If the file dir isn't open then we just render a placeholder message for now
         // TODO, put a button here to load a filesystem
         if self.root.is_none() {
@@ -58,24 +69,51 @@ impl FileTree {
         }
     }
 
+
     // TODO consider using keyed columns and the from_vecs method
-    fn render_level(&self, fs_dir: &FsDir) -> Column<'_, FileTreeMessage> {
-        let mut col = Column::<'_, FileTreeMessage>::new();
+    fn render_level(&self, fs_dir: &'a FsDir) -> Column<'a, Message> {
+        let mut col = Column::<'_, Message>::new();
         // Loop over the directories 
         for dir in fs_dir.dirs.iter() {
-            col = col.push(text(pathbuf_to_string(&dir.path)));
-            if fs_dir.expanded {
+            col = col.push(render_dir_row(dir));
+            if dir.expanded {
                 col = col.push(self.render_level(dir));
             }
         }
         // Loop over the files
-        for file in fs_dir.files.iter() {
-            col = col.push(text(pathbuf_to_string(file)));
+        for (file_count, file) in fs_dir.files.iter().enumerate() {
+            col = col.push(render_file_row(file));
         }
         col
+        .padding(Padding::ZERO.left(20))
     }
-
 }
+
+
+fn render_dir_row(fs_dir: &FsDir) -> Element<'_, Message> {
+    let arrow = if fs_dir.expanded { '⇓' } else { '⇒' };
+    mouse_area(
+        row![
+            text(arrow),
+            text(pathbuf_to_string(&fs_dir.path)),
+        ]
+        .spacing(5)
+        .width(Length::Fill)
+        .clip(true)
+    )
+    .on_press(Message::ToggleExpandDir(fs_dir.id.clone()))
+    .into()
+}
+
+fn render_file_row(file: &PathBuf) -> Element<'_, Message> {
+    let filename = PathBuf::from(file.as_path().file_name().unwrap());
+    mouse_area(
+        text(pathbuf_to_string(&filename))
+    )
+    .on_press(Message::OpenFile(file.to_path_buf()))
+    .into()
+}
+
 
 /////////// Logic ///////////////////
 
@@ -99,6 +137,24 @@ impl FsDir {
             dirs: vec!(),
             expanded: false,
         }
+    }
+
+    fn toggle_expanded(&mut self, id: String) {
+        let mut dir_stack: Vec<&mut FsDir> = vec!(self);
+        while !dir_stack.is_empty() {
+            let dir = dir_stack.pop().unwrap();
+
+            if dir.id == id {
+                dir.expanded = !dir.expanded;
+                return;
+            }
+            else {
+                for dir in dir.dirs.iter_mut() {
+                    dir_stack.push(dir)
+                }
+            }
+        }
+        println!("Id '{}' not found when toggling expansion", id);
     }
 }
 
@@ -142,6 +198,7 @@ fn validate_memristor_dir_structure(root_dir: &Path) -> Result<(), FileSystemErr
 // for now keep this as-is since it might be useful to 
 // retain path information in the ids 
 // TODO consider how I can make the id of the top level dir tidier
+// TODO it's probably faster to store the id in a Rc type
 fn read_directory(dir: &PathBuf, parent_id: &str, id_count: usize) -> Result<FsDir, FileSystemError> {
     let mut fs_dir = FsDir::init(dir, parent_id, id_count);
 

@@ -9,7 +9,7 @@ use iced::{self, Element};
 use crate::layout::Layout;
 
 // Messages for controling the top-level laout of the app
-#[derive(Debug, Clone, Copy)]
+#[derive(Debug, Clone)]
 enum Message {
     LayoutMessage(layout::Message),
 }
