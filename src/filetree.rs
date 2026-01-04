@@ -6,9 +6,13 @@ use std::ffi::OsString;
 use std::fs;
 use std::path::{Path, PathBuf};
 
-use iced::{Element, Padding, Length};
-use iced::widget::{row, Column, text, container, mouse_area};
+use iced::{Element, Padding, Length, Border, Color};
+use iced::border::Radius;
+use iced::widget::{row, Column, text, mouse_area, column, container, rule, Space, button};
+use iced::widget::container::Style;
 use thiserror::Error;
+
+use crate::components;
 
 pub struct FileTree {
     root: Option<FsDir>,
@@ -20,6 +24,7 @@ pub enum Message {
     OpenDir(PathBuf),
     ToggleExpandDir(String),
     OpenFile(PathBuf),
+    CollapseMenu,
 }
 
 // TODO handle invalid strings gracefully
@@ -29,6 +34,19 @@ fn pathbuf_to_string(buf: &PathBuf) -> String {
     )
 }
 
+
+fn title() -> Element<'static, Message> {
+    container(
+        row![
+            Space::new().width(10),
+            button("Collapse")
+                .on_press(Message::CollapseMenu)
+        ]
+        .spacing(10)
+    )
+    .center_y(40)
+    .into()
+}
 
 impl<'a> FileTree {
     pub fn new() -> Self {
@@ -58,15 +76,23 @@ impl<'a> FileTree {
     pub fn view(&self) -> Element<'_, Message> {
         // If the file dir isn't open then we just render a placeholder message for now
         // TODO, put a button here to load a filesystem
-        if self.root.is_none() {
-            return row!(text("No Directory loaded")).into();
+        let content = if self.root.is_none() {
+            container(
+                text("No Directory loaded")
+            )
         }
-
         else {
             let root = self.root.as_ref().unwrap();
             let filetree = self.render_level(root);
-            filetree.into()
-        }
+            container(filetree)
+        };
+
+        column![
+            title(),
+            components::hrule(),
+            content,
+        ]
+        .into()
     }
 
 

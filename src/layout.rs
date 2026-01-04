@@ -16,7 +16,7 @@ pub enum Message {
 pub struct Layout {
     panes: pane_grid::State<Pane>,
     focus: Option<pane_grid::Pane>,
-    menu_open: bool,
+    menu_pane: Option<pane_grid::Pane>,
     filetree: FileTree,
 }
 
@@ -31,17 +31,14 @@ const MAX_RATIO: f32 = 0.8;
 impl Layout {
     fn new() -> Self {
         let (mut panes, pane) = pane_grid::State::new(Pane{id: 0});
+        panes.split(Axis::Vertical, pane, Pane{id: 1});
 
-        let menu_open = true;
-
-        if menu_open {
-            panes.split(Axis::Vertical, pane, Pane{id: 1});
-        }
+        let menu_pane = Some(pane);
 
         Layout {
             panes,
             focus: None,
-            menu_open,
+            menu_pane,
             filetree: FileTree::new(),
         }
     }
@@ -56,6 +53,12 @@ impl Layout {
                     self.panes.resize(split, ratio);
                 }
             }
+            Message::FiletreeMessage(filetree::Message::CollapseMenu) => {
+                self.menu_pane.map(|pane| {
+                    self.panes.close(pane);
+                });
+                self.menu_pane = None;
+            }
             Message::FiletreeMessage(message) => { self.filetree.update(message) },
         }
     }
@@ -66,15 +69,6 @@ impl Layout {
         let pane_grid = PaneGrid::new(&self.panes, |_id, pane, _is_maximized| {
             //let is_focused = focus == Some(id);
 
-            let title = row![
-                "Pane",
-                text("A Pane")
-            ]
-            .spacing(5);
-
-            let title_bar = pane_grid::TitleBar::new(title)
-                .padding(10);
-
             pane_grid::Content::new(responsive(move |_| {
                 if pane.id == 0 {
                     self.filetree.view().map(Message::FiletreeMessage)
@@ -83,7 +77,6 @@ impl Layout {
                     content2()
                 }
             }))
-            .title_bar(title_bar)
         })
         .width(Fill)
         .height(Fill)
@@ -91,7 +84,7 @@ impl Layout {
         .on_click(Message::PaneClicked)
         .on_resize(10, Message::PaneResized);
 
-        container(pane_grid).padding(10).into()
+        container(pane_grid).into()
     }
 }
 

@@ -3,6 +3,7 @@
 
 mod layout;
 mod filetree;
+mod components;
 
 use iced::{self, Element};
 
