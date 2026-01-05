@@ -4,6 +4,9 @@
 mod layout;
 mod filetree;
 mod components;
+mod styles;
+mod content;
+mod header;
 
 use iced::{self, Element};
 

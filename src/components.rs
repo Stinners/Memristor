@@ -4,7 +4,7 @@ use iced::border::Radius;
 use iced::widget::{rule, Rule};
 
 pub fn hrule() -> Rule<'static> {
-    rule::horizontal(1)
+    rule::horizontal(0)
         .style(|_| { rule::Style {
             color: Color::BLACK,
             radius: Radius::new(0),

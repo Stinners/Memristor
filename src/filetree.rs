@@ -13,6 +13,7 @@ use iced::widget::container::Style;
 use thiserror::Error;
 
 use crate::components;
+use crate::styles;
 
 pub struct FileTree {
     root: Option<FsDir>,
@@ -24,7 +25,6 @@ pub enum Message {
     OpenDir(PathBuf),
     ToggleExpandDir(String),
     OpenFile(PathBuf),
-    CollapseMenu,
 }
 
 // TODO handle invalid strings gracefully
@@ -34,19 +34,6 @@ fn pathbuf_to_string(buf: &PathBuf) -> String {
     )
 }
 
-
-fn title() -> Element<'static, Message> {
-    container(
-        row![
-            Space::new().width(10),
-            button("Collapse")
-                .on_press(Message::CollapseMenu)
-        ]
-        .spacing(10)
-    )
-    .center_y(40)
-    .into()
-}
 
 impl<'a> FileTree {
     pub fn new() -> Self {
@@ -87,12 +74,7 @@ impl<'a> FileTree {
             container(filetree)
         };
 
-        column![
-            title(),
-            components::hrule(),
-            content,
-        ]
-        .into()
+        content.into()
     }
 
 

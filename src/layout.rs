@@ -1,23 +1,34 @@
 #![allow(dead_code, unused)]
 
-use iced::widget::{text, row, responsive, container};
+use iced::widget::{text, row, responsive, container, column};
 use iced::widget::pane_grid::{self, PaneGrid, Axis};
 use iced::{Element, Fill};
 
 use crate::filetree::{self, FileTree};
+use crate::content::{self, ContentArea};
+use crate::header::{self, MenuHeader, ContentHeader};
 
 #[derive(Debug, Clone)]
 pub enum Message {
     PaneClicked(pane_grid::Pane),
     PaneResized(pane_grid::ResizeEvent),
     FiletreeMessage(filetree::Message),
+    ContentAreaMessage(content::Message),
+    HeaderMessage(header::Message),
 }
 
 pub struct Layout {
+    // Pane handling 
     panes: pane_grid::State<Pane>,
     focus: Option<pane_grid::Pane>,
     menu_pane: Option<pane_grid::Pane>,
+    content_pane: pane_grid::Pane,
+
+    // Components
     filetree: FileTree,
+    content: ContentArea,
+    menu_header: MenuHeader,
+    content_header: ContentHeader,
 }
 
 #[derive(Clone, Copy)]
@@ -31,15 +42,18 @@ const MAX_RATIO: f32 = 0.8;
 impl Layout {
     fn new() -> Self {
         let (mut panes, pane) = pane_grid::State::new(Pane{id: 0});
-        panes.split(Axis::Vertical, pane, Pane{id: 1});
-
+        let (content_pane, _) = panes.split(Axis::Vertical, pane, Pane{id: 1}).unwrap();
         let menu_pane = Some(pane);
 
         Layout {
             panes,
             focus: None,
             menu_pane,
+            content_pane: content_pane,
             filetree: FileTree::new(),
+            content: ContentArea::new(),
+            menu_header: MenuHeader::new(),
+            content_header: ContentHeader::new(true),
         }
     }
 
@@ -48,18 +62,36 @@ impl Layout {
             Message::PaneClicked(pane) => { 
                 self.focus = Some(pane);
             }
+
             Message::PaneResized(pane_grid::ResizeEvent { split, ratio }) => {
                 if ratio > MIN_RATIO && ratio < MAX_RATIO {
                     self.panes.resize(split, ratio);
                 }
             }
-            Message::FiletreeMessage(filetree::Message::CollapseMenu) => {
-                self.menu_pane.map(|pane| {
-                    self.panes.close(pane);
-                });
-                self.menu_pane = None;
+
+            Message::FiletreeMessage(message) => { todo!() }
+
+            Message::HeaderMessage(header::Message::CloseMenu)  => {
+                if self.menu_pane.is_some() {
+                    self.panes.close(self.menu_pane.unwrap());
+                    self.menu_pane = None;
+                    self.content_header.update(header::Message::CloseMenu)
+                }
             }
-            Message::FiletreeMessage(message) => { self.filetree.update(message) },
+
+            Message::HeaderMessage(header::Message::OpenMenu)  => {
+                if self.menu_pane.is_none() {
+                    println!("Opening Menu");
+                    let (menu_pane, _) = self.panes.split(Axis::Vertical, self.content_pane, Pane{id: 0}).unwrap();
+                    self.menu_pane = Some(menu_pane);
+                    self.content_header.update(header::Message::OpenMenu);
+
+                    // TODO there must be a better way to do this
+                    self.panes.swap(menu_pane, self.content_pane);
+                }
+            }
+
+            Message::HeaderMessage(message) => { todo!() }
         }
     }
 
@@ -70,11 +102,20 @@ impl Layout {
             //let is_focused = focus == Some(id);
 
             pane_grid::Content::new(responsive(move |_| {
+                dbg!(pane.id);
                 if pane.id == 0 {
-                    self.filetree.view().map(Message::FiletreeMessage)
+                    column! [
+                        self.menu_header.view().map(Message::HeaderMessage),
+                        self.filetree.view().map(Message::FiletreeMessage),
+                    ]
+                    .into()
                 }
                 else {
-                    content2()
+                    column![
+                        self.content_header.view().map(Message::HeaderMessage),
+                        content2()
+                    ]
+                    .into()
                 }
             }))
         })
