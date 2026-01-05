@@ -1,14 +1,29 @@
 
-use iced::{Color};
+use iced::{Color, Element, Length};
 use iced::border::Radius;
-use iced::widget::{rule, Rule};
+use iced::widget::{rule, Rule, Container, container};
+use iced::alignment::Horizontal;
 
 pub fn hrule() -> Rule<'static> {
-    rule::horizontal(0)
+    rule::horizontal(1)
         .style(|_| { rule::Style {
             color: Color::BLACK,
             radius: Radius::new(0),
             fill_mode: rule::FillMode::Full,
             snap: false,
     }})
+}
+
+pub fn left_border<M: Send + 'static>(color: Color) -> Container<'static, M> {
+    container (
+        rule::vertical(1)
+            .style(move |_| { rule::Style {
+                color,
+                radius: Radius::new(0),
+                fill_mode: rule::FillMode::Full,
+                snap: false,
+        }})
+    )
+    .width(Length::Fill)
+    .align_x(Horizontal::Right)
 }

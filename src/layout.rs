@@ -102,7 +102,6 @@ impl Layout {
             //let is_focused = focus == Some(id);
 
             pane_grid::Content::new(responsive(move |_| {
-                dbg!(pane.id);
                 if pane.id == 0 {
                     column! [
                         self.menu_header.view().map(Message::HeaderMessage),
@@ -121,7 +120,7 @@ impl Layout {
         })
         .width(Fill)
         .height(Fill)
-        .spacing(10)
+        .spacing(0)
         .on_click(Message::PaneClicked)
         .on_resize(10, Message::PaneResized);
 

@@ -10,6 +10,7 @@ use iced::{Element, Padding, Length, Border, Color};
 use iced::border::Radius;
 use iced::widget::{row, Column, text, mouse_area, column, container, rule, Space, button};
 use iced::widget::container::Style;
+use iced::alignment::Horizontal;
 use thiserror::Error;
 
 use crate::components;
@@ -33,7 +34,6 @@ fn pathbuf_to_string(buf: &PathBuf) -> String {
         panic!("Invalid path value: {:?}", buf)
     )
 }
-
 
 impl<'a> FileTree {
     pub fn new() -> Self {
@@ -71,10 +71,14 @@ impl<'a> FileTree {
         else {
             let root = self.root.as_ref().unwrap();
             let filetree = self.render_level(root);
-            container(filetree)
+            container(filetree).align_top(Length::Fill)
         };
 
-        content.into()
+        row![
+            content,
+            components::left_border(Color::BLACK),
+        ]
+        .into()
     }
 
 

@@ -40,7 +40,11 @@ impl MenuHeader {
             .center_y(styles::HEADER_HEIGHT);
 
         column! [
-            header_contents,
+            row! [
+                header_contents,
+                components::left_border(Color { r: 0.8, g: 0.8, b: 0.8, a: 1.0 }),
+            ]
+            .height(styles::HEADER_HEIGHT),
             components::hrule(),
         ]
         .width(Length::Fill)
