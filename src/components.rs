@@ -5,7 +5,7 @@ use iced::widget::{rule, Rule, Container, container};
 use iced::alignment::Horizontal;
 
 pub fn hrule() -> Rule<'static> {
-    rule::horizontal(1)
+    rule::horizontal(2)
         .style(|_| { rule::Style {
             color: Color::BLACK,
             radius: Radius::new(0),
@@ -16,7 +16,7 @@ pub fn hrule() -> Rule<'static> {
 
 pub fn left_border<M: Send + 'static>(color: Color) -> Container<'static, M> {
     container (
-        rule::vertical(1)
+        rule::vertical(2)
             .style(move |_| { rule::Style {
                 color,
                 radius: Radius::new(0),

@@ -75,7 +75,8 @@ impl<'a> FileTree {
         };
 
         row![
-            content,
+            content
+                .padding(Padding::new(styles::SPACING_SMALL)),
             components::left_border(Color::BLACK),
         ]
         .into()

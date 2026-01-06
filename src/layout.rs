@@ -2,11 +2,12 @@
 
 use iced::widget::{text, row, responsive, container, column};
 use iced::widget::pane_grid::{self, PaneGrid, Axis};
-use iced::{Element, Fill};
+use iced::{Element, Fill, Padding};
 
 use crate::filetree::{self, FileTree};
 use crate::content::{self, ContentArea};
 use crate::header::{self, MenuHeader, ContentHeader};
+use crate::styles;
 
 #[derive(Debug, Clone)]
 pub enum Message {
@@ -42,8 +43,9 @@ const MAX_RATIO: f32 = 0.8;
 impl Layout {
     fn new() -> Self {
         let (mut panes, pane) = pane_grid::State::new(Pane{id: 0});
-        let (content_pane, _) = panes.split(Axis::Vertical, pane, Pane{id: 1}).unwrap();
+        let (content_pane, menu_content_split) = panes.split(Axis::Vertical, pane, Pane{id: 1}).unwrap();
         let menu_pane = Some(pane);
+        panes.resize(menu_content_split, 0.25);
 
         Layout {
             panes,
@@ -69,7 +71,7 @@ impl Layout {
                 }
             }
 
-            Message::FiletreeMessage(message) => { todo!() }
+            Message::FiletreeMessage(message) => { self.filetree.update(message) }
 
             Message::HeaderMessage(header::Message::CloseMenu)  => {
                 if self.menu_pane.is_some() {
@@ -81,10 +83,10 @@ impl Layout {
 
             Message::HeaderMessage(header::Message::OpenMenu)  => {
                 if self.menu_pane.is_none() {
-                    println!("Opening Menu");
-                    let (menu_pane, _) = self.panes.split(Axis::Vertical, self.content_pane, Pane{id: 0}).unwrap();
+                    let (menu_pane, menu_content_split) = self.panes.split(Axis::Vertical, self.content_pane, Pane{id: 0}).unwrap();
                     self.menu_pane = Some(menu_pane);
                     self.content_header.update(header::Message::OpenMenu);
+                    self.panes.resize(menu_content_split, 0.25);
 
                     // TODO there must be a better way to do this
                     self.panes.swap(menu_pane, self.content_pane);
@@ -112,7 +114,7 @@ impl Layout {
                 else {
                     column![
                         self.content_header.view().map(Message::HeaderMessage),
-                        content2()
+                        container(content2()).padding(Padding::new(styles::SPACING_SMALL)),
                     ]
                     .into()
                 }
