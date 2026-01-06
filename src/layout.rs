@@ -71,6 +71,10 @@ impl Layout {
                 }
             }
 
+            Message::FiletreeMessage(filetree::Message::OpenFile(filepath)) => {
+                self.content.update(content::Message::OpenFile(filepath))
+            }
+
             Message::FiletreeMessage(message) => { self.filetree.update(message) }
 
             Message::HeaderMessage(header::Message::CloseMenu)  => {
@@ -94,6 +98,10 @@ impl Layout {
             }
 
             Message::HeaderMessage(message) => { todo!() }
+
+            Message::ContentAreaMessage(message) => {
+                self.content.update(message);
+            }
         }
     }
 
@@ -114,7 +122,9 @@ impl Layout {
                 else {
                     column![
                         self.content_header.view().map(Message::HeaderMessage),
-                        container(content2()).padding(Padding::new(styles::SPACING_SMALL)),
+                        container(
+                            self.content.view().map(Message::ContentAreaMessage)
+                        )
                     ]
                     .into()
                 }

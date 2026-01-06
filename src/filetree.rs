@@ -37,7 +37,7 @@ fn pathbuf_to_string(buf: &PathBuf) -> String {
 
 impl<'a> FileTree {
     pub fn new() -> Self {
-        let test_dir = PathBuf::from("./test/test_fs/populated");
+        let test_dir = PathBuf::from(styles::TEST_DIR);
         let fs_dir = read_filesystem(&test_dir).unwrap();
         FileTree {
             root: Some(fs_dir),
@@ -53,8 +53,8 @@ impl<'a> FileTree {
             },
             Message::OpenFile(filepath) => { 
                 todo!()
-            }
-            _ => { todo!() }
+            },
+            Message::OpenDir(_) => { todo!() }
         }
     }
 
