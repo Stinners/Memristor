@@ -97,6 +97,14 @@ impl Layout {
                 }
             }
 
+            Message::HeaderMessage(header::Message::TogglePreview) => {
+                self.content.preview_open = !self.content.preview_open;
+            }
+
+            Message::HeaderMessage(header::Message::ToggleEditor) => {
+                self.content.editor_open = !self.content.editor_open;
+            }
+
             Message::HeaderMessage(message) => { todo!() }
 
             Message::ContentAreaMessage(message) => {

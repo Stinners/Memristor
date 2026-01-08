@@ -29,8 +29,8 @@ impl EditorState {
 pub struct ContentArea {
     editor_state: EditorState,
     preview_file: Option<PathBuf>,
-    editor_open: bool,
-    preview_open: bool
+    pub editor_open: bool,
+    pub preview_open: bool
 }
 
 #[derive(Debug, Clone)]

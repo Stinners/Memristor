@@ -12,10 +12,13 @@ use crate::components;
 
 #[derive(Debug, Clone)]
 pub enum Message {
-
     // These two messages are handled at the Layout level 
     CloseMenu,
     OpenMenu,
+
+    // These are handled in ContentArea
+    ToggleEditor,
+    TogglePreview,
 }
 
 
@@ -53,13 +56,17 @@ impl MenuHeader {
 }
 
 pub struct ContentHeader {
-    pub menu_open: bool
+    pub menu_open: bool,
+    pub editor_open: bool,
+    pub preview_open: bool,
 }
 
 impl ContentHeader {
     pub fn new(menu_open: bool) -> Self {
         ContentHeader {
-            menu_open
+            menu_open,
+            editor_open: false,
+            preview_open: false,
         }
     }
 
@@ -67,19 +74,31 @@ impl ContentHeader {
         match message {
             Message::CloseMenu => { self.menu_open = false },
             Message::OpenMenu => { self.menu_open = true },
+            Message::ToggleEditor => { self.editor_open != !self.editor_open; },
+            Message::TogglePreview => { self.preview_open != self.preview_open; },
         }
     }
 
 
     pub fn view(&self) -> Element<'_, Message> {
-        let left_buttons = row! [
+        let mut left_buttons = row! [
                 Space::new().width(10),
             ]
             .spacing(10);
 
-        let left_buttons = 
+        left_buttons = 
             if !self.menu_open { left_buttons.push(button("Expand").on_press(Message::OpenMenu)) }
             else { left_buttons };
+
+        left_buttons = left_buttons.push(
+            button("Editor")
+                .on_press(Message::ToggleEditor)
+        );
+
+        left_buttons = left_buttons.push(
+            button("Preview")
+                .on_press(Message::TogglePreview)
+        );
 
         let header_contents = container(
                 left_buttons
