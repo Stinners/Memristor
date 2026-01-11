@@ -3,10 +3,13 @@
 
 use std::path::PathBuf;
 use std::fs;
+use std::io;
 
-use iced::{Element, Padding, Length, Border, Color};
+use iced::{Element, Padding, Length, Border, Color, Background, Theme};
 use iced::border::Radius;
-use iced::widget::{row, Row, text, mouse_area, column, container, rule, Space, button, TextEditor, text_editor, svg, Svg};
+use iced::widget::{row, Row, text, mouse_area, column, container, rule, 
+                   Space, button, TextEditor, text_editor, svg, Svg, Column,
+                   scrollable};
 use iced::widget::container::Style;
 use thiserror::Error;
 
@@ -28,7 +31,7 @@ impl EditorState {
 
 pub struct ContentArea {
     editor_state: EditorState,
-    preview_file: Option<PathBuf>,
+    preview_dir: Option<PathBuf>,
     pub editor_open: bool,
     pub preview_open: bool
 }
@@ -42,11 +45,10 @@ pub enum Message {
 
 impl ContentArea {
     pub fn new() -> Self {
-        let mut preview_file = PathBuf::from(styles::TEST_DIR);
-        preview_file.push("preview.svg");
+        let mut preview_dir = PathBuf::from(styles::TEST_DIR);
         ContentArea {
             editor_state: EditorState::new(),
-            preview_file: Some(preview_file),
+            preview_dir: Some(preview_dir),
             editor_open: false,
             preview_open: true,
         }
@@ -57,13 +59,13 @@ impl ContentArea {
             Message::Edit(action) => {
                 self.editor_state.content.perform(action);
             }
-
+    
             Message::OpenFile(filepath) => {
                 let text = fs::read_to_string(filepath).expect("Could not read file");
                 self.editor_state.content = text_editor::Content::with_text(&text);
                 self.editor_open = true;
             }
-
+    
             Message::OpenPreview => {
                 self.preview_open = true;
             }
@@ -73,21 +75,66 @@ impl ContentArea {
     fn editor_view(&self) -> Element<'_, Message> {
         container(
             text_editor(&self.editor_state.content)
-                .placeholder("Editor is not open")
+                .placeholder("")
                 .on_action(Message::Edit)
+                .style(|theme: &Theme, _status| {
+                    let palette = theme.extended_palette();
+                    text_editor::Style {
+                        background: Background::Color(palette.background.base.color),
+                        border: Border { 
+                            radius: 1.0.into(),
+                            width: 0.0,
+                            color: palette.background.strong.color,
+                        },
+                        placeholder: palette.secondary.base.color,
+                        value: palette.background.base.text,
+                        selection: palette.primary.weak.color,
+                    }
+                })
         )
         .width(Length::FillPortion(1))
         .height(Length::Fill)
         .into()
     }
 
+    fn get_preview_files(&self) -> io::Result<Vec<PathBuf>> {
+        if self.preview_dir.is_none() {
+            return Ok(vec!());
+        }
+        let dir = self.preview_dir.as_ref().unwrap();
+        let mut svgs = vec!();
+        let dir_contents = fs::read_dir(dir)?;
+        for entry in dir_contents {
+            let entry = entry?;
+            if entry.file_type()?.is_file() {
+                let filename: PathBuf = entry.file_name().into();
+                if filename.extension().is_some_and(|ext| ext == "svg") {
+                svgs.push(entry.path());
+                }
+            }
+        }
+        Ok(svgs)
+    }
+
     // TODO error handling
     fn preview_view(&self) -> Element<'_, Message> {
-        container(
-            svg(self.preview_file.as_ref().unwrap())
-        )
+        let mut svgs = column![].clip(false);
+        match self.get_preview_files() {
+            Err(_) => {}
+            Ok(files) => {
+                for file in files.iter() {
+                    let image = svg(&file);
+                    svgs = svgs.push(image);
+                }
+            }
+        }
+        container( scrollable( svgs ))
         .width(Length::FillPortion(1))
         .height(Length::Fill)
+        .style(|_| container::Style {
+            background: Some(Background::Color(Color {r:0.9, g: 0.9, b: 0.9, a: 1.0})),
+            ..container::Style::default()
+        })
         .into()
     }
 
