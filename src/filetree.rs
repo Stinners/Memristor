@@ -23,9 +23,9 @@ pub struct FileTree {
 
 #[derive(Debug, Clone)]
 pub enum Message {
-    OpenDir(PathBuf),
     ToggleExpandDir(String),
     OpenFile(PathBuf),
+    OpenDir(PathBuf),
 }
 
 // TODO handle invalid strings gracefully
@@ -40,7 +40,7 @@ impl<'a> FileTree {
         let test_dir = PathBuf::from(styles::TEST_DIR);
         let fs_dir = read_filesystem(&test_dir).unwrap();
         FileTree {
-            root: Some(fs_dir),
+            root: None,
             focus_path: None,
         }
     }
@@ -52,9 +52,12 @@ impl<'a> FileTree {
                 self.root.as_mut().map(|fs_dir| fs_dir.toggle_expanded(id));
             },
             Message::OpenFile(filepath) => { 
-                todo!()
+                unreachable!("Should be handled in layout");
             },
-            Message::OpenDir(_) => { todo!() }
+            Message::OpenDir(dir_path) => {
+                let fs_dir = read_filesystem(&dir_path).unwrap();
+                self.root = Some(fs_dir);
+            }
         }
     }
 

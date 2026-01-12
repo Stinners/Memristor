@@ -1,13 +1,18 @@
 #![allow(dead_code, unused)]
 
+use std::path::PathBuf;
+use std::env::home_dir;
+
 use iced::widget::{text, row, responsive, container, column};
 use iced::widget::pane_grid::{self, PaneGrid, Axis};
 use iced::{Element, Fill, Padding};
+use rfd::FileDialog;
 
 use crate::filetree::{self, FileTree};
 use crate::content::{self, ContentArea};
 use crate::header::{self, MenuHeader, ContentHeader};
 use crate::styles;
+use crate::settings::{Settings, ConfigStore};
 
 #[derive(Debug, Clone)]
 pub enum Message {
@@ -19,6 +24,9 @@ pub enum Message {
 }
 
 pub struct Layout {
+    // Metadata
+    settings: Settings,
+
     // Pane handling 
     panes: pane_grid::State<Pane>,
     focus: Option<pane_grid::Pane>,
@@ -40,6 +48,15 @@ struct Pane {
 const MIN_RATIO: f32 = 0.2;
 const MAX_RATIO: f32 = 0.8;
 
+fn pick_dir() -> Option<PathBuf> {
+    let mut dialog = FileDialog::new()
+        .set_can_create_directories(true);
+    if let Some(dir) = home_dir() {
+        dialog = dialog.set_directory(dir);
+    }
+    dialog.pick_folder()
+}
+
 impl Layout {
     fn new() -> Self {
         let (mut panes, pane) = pane_grid::State::new(Pane{id: 0});
@@ -48,6 +65,8 @@ impl Layout {
         panes.resize(menu_content_split, 0.25);
 
         Layout {
+            // TODO error handling
+            settings: ConfigStore::init().unwrap().read().unwrap(),
             panes,
             focus: None,
             menu_pane,
@@ -103,6 +122,12 @@ impl Layout {
 
             Message::HeaderMessage(header::Message::ToggleEditor) => {
                 self.content.editor_open = !self.content.editor_open;
+            }
+
+            Message::HeaderMessage(header::Message::OpenDirectory) => {
+                if let Some(dir) = pick_dir() {
+                    self.filetree.update(filetree::Message::OpenDir(dir));
+                }
             }
 
             Message::HeaderMessage(message) => { todo!() }

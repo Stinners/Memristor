@@ -41,14 +41,14 @@ pub enum Message {
     Edit(text_editor::Action),
     OpenFile(PathBuf),
     OpenPreview,
+    OpenDir(PathBuf),
 }
 
 impl ContentArea {
     pub fn new() -> Self {
-        let mut preview_dir = PathBuf::from(styles::TEST_DIR);
         ContentArea {
             editor_state: EditorState::new(),
-            preview_dir: Some(preview_dir),
+            preview_dir: None,
             editor_open: false,
             preview_open: true,
         }
@@ -59,15 +59,16 @@ impl ContentArea {
             Message::Edit(action) => {
                 self.editor_state.content.perform(action);
             }
-    
             Message::OpenFile(filepath) => {
                 let text = fs::read_to_string(filepath).expect("Could not read file");
                 self.editor_state.content = text_editor::Content::with_text(&text);
                 self.editor_open = true;
             }
-    
             Message::OpenPreview => {
                 self.preview_open = true;
+            },
+            Message::OpenDir(dir) => {
+                self.preview_dir = Some(dir);
             }
         }
     }
