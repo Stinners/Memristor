@@ -11,9 +11,9 @@ use iced::border::Radius;
 use iced::widget::{row, Column, text, mouse_area, column, container, rule, Space, button};
 use iced::widget::container::Style;
 use iced::alignment::Horizontal;
-use thiserror::Error;
 
 use crate::components;
+use crate::error::FileSystemError;
 use crate::styles;
 
 pub struct FileTree {
@@ -174,18 +174,8 @@ impl FsDir {
     }
 }
 
-#[derive(Error, Debug, PartialEq)]
-pub enum FileSystemError {
-    #[error("Could not read directory at: '{path:?}'")]
-    CouldNotReadDir { path: OsString },
-    #[error("Could not read file")]
-    CouldNotReadFile,
-    #[error("Not Memristor Directory")]
-    NotMemristerDirectory,
-}
-
 fn validate_memristor_dir_structure(root_dir: &Path) -> Result<(), FileSystemError> {
-    let contents = fs::read_dir(root_dir).map_err(|_| FileSystemError::CouldNotReadDir {
+    let contents = fs::read_dir(root_dir).map_err(|_| FileSystemError::ReadFileError {
         path: root_dir.into(),
     })?;
 
@@ -193,7 +183,7 @@ fn validate_memristor_dir_structure(root_dir: &Path) -> Result<(), FileSystemErr
     let mut has_pdf_dir = false;
 
     for entry in contents {
-        let entry = entry.map_err(|_| FileSystemError::CouldNotReadFile)?;
+        let entry = entry.map_err(|_| FileSystemError::ReadDirError { path: root_dir.into() })?; 
         let is_dir = entry.file_type().unwrap().is_dir();
 
         if is_dir && entry.file_name() == "pdf" {
@@ -210,20 +200,18 @@ fn validate_memristor_dir_structure(root_dir: &Path) -> Result<(), FileSystemErr
     }
 }
 
-// TODO Consider just using unique integers for the ids 
-// for now keep this as-is since it might be useful to 
-// retain path information in the ids 
+// TODO we don;t need the id - we can just use the path 
 // TODO consider how I can make the id of the top level dir tidier
 // TODO it's probably faster to store the id in a Rc type
 fn read_directory(dir: &PathBuf, parent_id: &str, id_count: usize) -> Result<FsDir, FileSystemError> {
     let mut fs_dir = FsDir::init(dir, parent_id, id_count);
 
     let contents =
-        fs::read_dir(dir).map_err(|_| FileSystemError::CouldNotReadDir { path: dir.into() })?;
+        fs::read_dir(dir).map_err(|_| FileSystemError::ReadDirError { path: dir.into() })?;
 
     let mut child_dir_count = 0;
     for entry in contents {
-        let entry = entry.map_err(|_| FileSystemError::CouldNotReadFile)?;
+        let entry = entry.map_err(|_| FileSystemError::ReadDirError { path: dir.into() })?; 
         let is_dir = entry.file_type().unwrap().is_dir();
 
         if is_dir {

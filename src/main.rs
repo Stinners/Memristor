@@ -9,6 +9,7 @@ mod content;
 mod header;
 mod typst;
 mod settings;
+mod error;
 
 use iced::{self, Element};
 

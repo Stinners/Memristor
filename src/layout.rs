@@ -67,7 +67,7 @@ impl Layout {
     fn new() -> Self {
 
         // Init app data
-        let typst = TypstContext::new();
+        let typst = TypstContext::new().expect("Couldn't create temporary directory");
 
         // Init Panes 
         let (mut panes, pane) = pane_grid::State::new(Pane{id: 0});
@@ -87,7 +87,7 @@ impl Layout {
             menu_header: MenuHeader::new(),
             content_header: ContentHeader::new(true),
 
-            typst: TypstContext::new(),
+            typst: typst,
         }
     }
 
@@ -137,12 +137,6 @@ impl Layout {
                 self.content.editor_open = !self.content.editor_open;
             }
 
-            Message::HeaderMessage(header::Message::OpenDirectory) => {
-                if let Some(dir) = pick_dir() {
-                    self.filetree.update(filetree::Message::OpenDir(dir));
-                }
-            }
-
             Message::HeaderMessage(message) => { todo!() }
 
             Message::ContentAreaMessage(message) => {
@@ -169,7 +163,7 @@ impl Layout {
                     column![
                         self.content_header.view().map(Message::HeaderMessage),
                         container(
-                            self.content.view().map(Message::ContentAreaMessage)
+                            self.content.view(&self.typst).map(Message::ContentAreaMessage)
                         )
                     ]
                     .into()
