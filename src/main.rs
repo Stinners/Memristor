@@ -8,6 +8,7 @@ mod styles;
 mod content;
 mod header;
 mod typst;
+mod settings;
 
 use iced::{self, Element};
 

@@ -15,10 +15,12 @@ pub enum Message {
     // These two messages are handled at the Layout level 
     CloseMenu,
     OpenMenu,
+    OpenDirectory,
 
     // These are handled in ContentArea
     ToggleEditor,
     TogglePreview,
+
 }
 
 
@@ -36,7 +38,9 @@ impl MenuHeader {
                 row![
                     Space::new().width(10),
                     button("Collapse")
-                        .on_press(Message::CloseMenu)
+                        .on_press(Message::CloseMenu),
+                    button("Open")
+                        .on_press(Message::OpenDirectory) 
                 ]
                 .spacing(10)
             )
@@ -76,6 +80,7 @@ impl ContentHeader {
             Message::OpenMenu => { self.menu_open = true },
             Message::ToggleEditor => { self.editor_open != !self.editor_open; },
             Message::TogglePreview => { self.preview_open != self.preview_open; },
+            Message::OpenDirectory => { todo!() }
         }
     }
 
