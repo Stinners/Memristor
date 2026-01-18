@@ -1,22 +1,14 @@
-
 #![allow(dead_code, unused)]
 
 use std::path::PathBuf;
 use std::fs;
-use std::io;
-use std::time::{SystemTime, Instant, Duration};
+use std::time::{Instant, Duration};
 
-use iced::{Element, Padding, Length, Border, Color, Background, Theme, Task};
-use iced::border::Radius;
-use iced::widget::{row, Row, text, mouse_area, column, container, rule, 
-                   Space, button, TextEditor, text_editor, svg, Svg, Column,
-                   scrollable};
-use iced::widget::container::Style;
-use thiserror::Error;
+use iced::{Element, Length, Border, Color, Background, Theme, Task};
+use iced::widget::{Row,column, container, text_editor, svg, scrollable};
 
 use crate::error::TypstError;
-use crate::styles;
-use crate::typst::{TypstContext, RenderResult};
+use crate::typst::TypstContext;
 
 const SECONDS_BETWEEN_RENDER: u64 = 5;
 
@@ -131,17 +123,8 @@ impl ContentArea {
         .into()
     }
 
-    fn handle_render_result(&mut self, result: RenderResult) {
-        match result {
-            RenderResult::Debounce => (),
-            RenderResult::Error(msg) => (), // TODO error handling
-            RenderResult::Success(files) => self.preview_files = files,
-        }
-    }
-
     // TODO error handling
     fn preview_view(&self) -> Element<'_, Message> {
-
         let mut svgs = column![].clip(false);
         for file in self.preview_files.iter() {
             let image = svg(&file);
@@ -157,7 +140,7 @@ impl ContentArea {
         .into()
     }
 
-    pub fn view(&self, typst: &TypstContext) -> Element<'_, Message> {
+    pub fn view(&self) -> Element<'_, Message> {
         let mut container = Row::new()
                 .width(Length::Fill);
 

@@ -1,16 +1,10 @@
+#![allow(dead_code, unused)]
 
-#![allow(dead_code)]
-#![allow(unused)]
-
-use std::ffi::OsString;
 use std::fs;
 use std::path::{Path, PathBuf};
 
-use iced::{Element, Padding, Length, Border, Color};
-use iced::border::Radius;
-use iced::widget::{row, Column, text, mouse_area, column, container, rule, Space, button};
-use iced::widget::container::Style;
-use iced::alignment::Horizontal;
+use iced::{Element, Padding, Length, Color};
+use iced::widget::{row, Column, text, mouse_area, container};
 
 use crate::components;
 use crate::error::FileSystemError;
@@ -51,7 +45,7 @@ impl<'a> FileTree {
             Message::ToggleExpandDir(id) => {
                 self.root.as_mut().map(|fs_dir| fs_dir.toggle_expanded(id));
             },
-            Message::OpenFile(filepath) => { 
+            Message::OpenFile(_) => { 
                 unreachable!("Should be handled in layout");
             },
             Message::OpenDir(dir_path) => {
@@ -97,7 +91,7 @@ impl<'a> FileTree {
             }
         }
         // Loop over the files
-        for (file_count, file) in fs_dir.files.iter().enumerate() {
+        for (_file_count, file) in fs_dir.files.iter().enumerate() {
             col = col.push(render_file_row(file));
         }
         col

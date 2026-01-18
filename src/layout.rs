@@ -3,17 +3,15 @@
 use std::path::PathBuf;
 use std::env::home_dir;
 
-use iced::widget::{text, row, responsive, container, column};
+use iced::widget::{responsive, container, column};
 use iced::widget::pane_grid::{self, PaneGrid, Axis};
-use iced::{Element, Fill, Padding, Task};
+use iced::{Element, Fill, Task};
 use rfd::FileDialog;
-use tempdir::TempDir;
 
 use crate::filetree::{self, FileTree};
 use crate::content::{self, ContentArea};
 use crate::header::{self, MenuHeader, ContentHeader};
-use crate::styles;
-use crate::typst::{TypstContext, RenderResult};
+use crate::typst::TypstContext;
 
 use crate::settings::{Settings, ConfigStore};
 
@@ -128,7 +126,8 @@ impl Layout {
 
             Message::HeaderMessage(header::Message::OpenMenu)  => {
                 if self.menu_pane.is_none() {
-                    let (menu_pane, menu_content_split) = self.panes.split(Axis::Vertical, self.content_pane, Pane{id: 0}).unwrap();
+                    let (menu_pane, menu_content_split) = 
+                        self.panes.split(Axis::Vertical, self.content_pane, Pane{id: 0}).unwrap();
                     self.menu_pane = Some(menu_pane);
                     self.content_header.update(header::Message::OpenMenu);
                     self.panes.resize(menu_content_split, 0.25);
@@ -176,7 +175,7 @@ impl Layout {
                     column![
                         self.content_header.view().map(Message::HeaderMessage),
                         container(
-                            self.content.view(&self.typst).map(Message::ContentAreaMessage)
+                            self.content.view().map(Message::ContentAreaMessage)
                         )
                     ]
                     .into()
@@ -193,20 +192,8 @@ impl Layout {
     }
 }
 
-fn content1() -> Element<'static, Message> {
-    row!(text("Pane 1")).into()
-}
-
-fn content2() -> Element<'static, Message> {
-    row!(text("Pane 2")).into()
-}
-
 impl Default for Layout {
     fn default() -> Self {
         Self::new()
     }
-}
-
-pub fn layout() -> Layout {
-    Layout::default()
 }

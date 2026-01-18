@@ -21,17 +21,6 @@ pub struct TypstContext {
     pub temp_dir: TempDir,
 }
 
-#[derive(Clone, Debug)]
-pub enum RenderResult {
-    Debounce,
-    Success(Vec<PathBuf>),
-    Error(TypstError),
-}
-
-// Used as a typestate to make sure we 
-// check the debounce before rendering
-pub enum ShouldRender {ShouldRender(Instant)}
-
 impl TypstContext { 
     // TODO This should check that typst is installed 
     pub fn new() -> Result<Self, TypstError> {
