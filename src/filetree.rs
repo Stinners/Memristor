@@ -1,5 +1,6 @@
 #![allow(dead_code, unused)]
 
+use std::borrow::Cow;
 use std::fs;
 use std::path::{Path, PathBuf};
 
@@ -22,11 +23,8 @@ pub enum Message {
     OpenDir(PathBuf),
 }
 
-// TODO handle invalid strings gracefully
-fn pathbuf_to_string(buf: &PathBuf) -> String {
-    buf.clone().into_os_string().into_string().unwrap_or_else(|_|
-        panic!("Invalid path value: {:?}", buf)
-    )
+fn pathbuf_to_string<'a>(buf: &'a PathBuf) -> Cow<'a, str> {
+    buf.as_path().as_os_str().to_string_lossy()
 }
 
 impl<'a> FileTree {
@@ -118,7 +116,7 @@ fn render_dir_row(fs_dir: &FsDir) -> Element<'_, Message> {
 fn render_file_row(file: &PathBuf) -> Element<'_, Message> {
     let filename = PathBuf::from(file.as_path().file_name().unwrap());
     mouse_area(
-        text(pathbuf_to_string(&filename))
+        text(pathbuf_to_string(&filename).into_owned())
     )
     .on_press(Message::OpenFile(file.to_path_buf()))
     .into()
