@@ -11,7 +11,7 @@ mod typst;
 mod settings;
 mod error;
 
-use iced::{self, Element};
+use iced::{self, Element, Task};
 
 use crate::layout::Layout;
 
@@ -26,10 +26,11 @@ struct App {
 }
 
 impl App {
-    fn update(&mut self, message: Message) {
+    fn update(&mut self, message: Message) -> Task<Message> {
         match message {
             Message::LayoutMessage(message) => {
                 self.layout.update(message)
+                    .map(|msg| Message::LayoutMessage(msg))
             }
         }
     }

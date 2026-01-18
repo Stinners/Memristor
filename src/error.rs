@@ -25,7 +25,7 @@ pub enum FileSystemError {
 
 }
 
-#[derive(Error, Debug, PartialEq)]
+#[derive(Error, Debug, PartialEq, Clone)]
 pub enum TypstError {
     #[error("Could not find typst on path")]
     TypstNotInstalled,

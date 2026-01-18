@@ -17,16 +17,20 @@ use crate::error::{TypstError, FileSystemError};
 const SECONDS_BETWEEN_RENDER: u64 = 5;
 
 pub struct TypstContext {
-    preview_path: PathBuf,
-    temp_dir: TempDir,
-    next_render: Instant,
+    pub preview_path: PathBuf,
+    pub temp_dir: TempDir,
 }
 
+#[derive(Clone, Debug)]
 pub enum RenderResult {
     Debounce,
     Success(Vec<PathBuf>),
     Error(TypstError),
 }
+
+// Used as a typestate to make sure we 
+// check the debounce before rendering
+pub enum ShouldRender {ShouldRender(Instant)}
 
 impl TypstContext { 
     // TODO This should check that typst is installed 
@@ -37,43 +41,17 @@ impl TypstContext {
         Ok(TypstContext {
             preview_path: temp_dir.path().join("preview{0p}.svg"),
             temp_dir,
-            next_render: Instant::now(),
         })
     }
 
-    // This is going to block the UI - we need to have it happen on another thread
-    pub fn render(&mut self, content: &str, open_file: &PathBuf) -> RenderResult {
-        // Debounce render messages
-        let now = Instant::now();
-        if now < self.next_render {
-            return RenderResult::Debounce;
-        }
-
-        let compile_result = self.compile(content, open_file);
-
-        // Update the debounce time
-        let next_render = now.checked_add(Duration::from_secs(SECONDS_BETWEEN_RENDER)).unwrap();
-        self.next_render = next_render;
-
-        if compile_result.is_err() {
-            return RenderResult::Error(compile_result.unwrap_err());
-        }
-
-        // Get the preview files
-        match self.get_preview_files() {
-            Err(err) => RenderResult::Error(TypstError::FilesystemError(err.kind())),
-            Ok(files) => RenderResult::Success(files),
-        }
-    }
-
-    fn compile(&self, content: &str, open_file: &PathBuf) -> Result<(), TypstError> {
+    pub async fn compile(preview_path: PathBuf, content: String, open_file: PathBuf) -> Result<(), TypstError> {
         let content_directory = open_file.as_path().parent().unwrap();
 
         // Start the typst process
         let mut typst = Command::new("typst")
             .arg("compile")
             .arg("--root").arg(content_directory)
-            .arg(&self.preview_path)
+            .arg(preview_path)
             .stdin(Stdio::piped())
             .stdout(Stdio::inherit())
             .spawn()

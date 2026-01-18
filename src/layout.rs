@@ -2,9 +2,10 @@
 
 use std::path::PathBuf;
 use std::env::home_dir;
+
 use iced::widget::{text, row, responsive, container, column};
 use iced::widget::pane_grid::{self, PaneGrid, Axis};
-use iced::{Element, Fill, Padding};
+use iced::{Element, Fill, Padding, Task};
 use rfd::FileDialog;
 use tempdir::TempDir;
 
@@ -12,7 +13,7 @@ use crate::filetree::{self, FileTree};
 use crate::content::{self, ContentArea};
 use crate::header::{self, MenuHeader, ContentHeader};
 use crate::styles;
-use crate::typst::TypstContext;
+use crate::typst::{TypstContext, RenderResult};
 
 use crate::settings::{Settings, ConfigStore};
 
@@ -91,31 +92,38 @@ impl Layout {
         }
     }
 
-    pub fn update(&mut self, message: Message) {
+    pub fn update(&mut self, message: Message) -> Task<Message> {
         match message {
             Message::PaneClicked(pane) => { 
                 self.focus = Some(pane);
+                Task::none()
             }
 
             Message::PaneResized(pane_grid::ResizeEvent { split, ratio }) => {
                 if ratio > MIN_RATIO && ratio < MAX_RATIO {
                     self.panes.resize(split, ratio);
                 }
+                Task::none()
             }
 
             Message::FiletreeMessage(filetree::Message::OpenFile(filepath)) => {
-                self.content.update(content::Message::OpenFile(filepath.clone()), &mut self.typst);
-                self.filetree.update(filetree::Message::OpenFile(filepath));
+                self.filetree.update(filetree::Message::OpenFile(filepath.clone()));
+                self.content.update(content::Message::OpenFile(filepath), &mut self.typst)
+                    .map(|future| Message::ContentAreaMessage(future))
             }
 
-            Message::FiletreeMessage(message) => { self.filetree.update(message) }
+            Message::FiletreeMessage(message) => { 
+                self.filetree.update(message);
+                Task::none()
+            }
 
             Message::HeaderMessage(header::Message::CloseMenu)  => {
                 if self.menu_pane.is_some() {
                     self.panes.close(self.menu_pane.unwrap());
                     self.menu_pane = None;
-                    self.content_header.update(header::Message::CloseMenu)
+                    self.content_header.update(header::Message::CloseMenu);
                 }
+                Task::none()
             }
 
             Message::HeaderMessage(header::Message::OpenMenu)  => {
@@ -128,20 +136,24 @@ impl Layout {
                     // TODO there must be a better way to do this
                     self.panes.swap(menu_pane, self.content_pane);
                 }
+                Task::none()
             }
 
             Message::HeaderMessage(header::Message::TogglePreview) => {
                 self.content.preview_open = !self.content.preview_open;
+                Task::none()
             }
 
             Message::HeaderMessage(header::Message::ToggleEditor) => {
                 self.content.editor_open = !self.content.editor_open;
+                Task::none()
             }
 
             Message::HeaderMessage(message) => { todo!() }
 
             Message::ContentAreaMessage(message) => {
-                self.content.update(message, &mut self.typst);
+                self.content.update(message, &mut self.typst)
+                    .map(|future| Message::ContentAreaMessage(future))
             }
         }
     }

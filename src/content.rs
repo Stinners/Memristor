@@ -4,8 +4,9 @@
 use std::path::PathBuf;
 use std::fs;
 use std::io;
+use std::time::{SystemTime, Instant, Duration};
 
-use iced::{Element, Padding, Length, Border, Color, Background, Theme};
+use iced::{Element, Padding, Length, Border, Color, Background, Theme, Task};
 use iced::border::Radius;
 use iced::widget::{row, Row, text, mouse_area, column, container, rule, 
                    Space, button, TextEditor, text_editor, svg, Svg, Column,
@@ -17,10 +18,13 @@ use crate::error::TypstError;
 use crate::styles;
 use crate::typst::{TypstContext, RenderResult};
 
+const SECONDS_BETWEEN_RENDER: u64 = 5;
+
 pub struct ContentArea {
     open_file: Option<PathBuf>,
     content: text_editor::Content,
     preview_files: Vec<PathBuf>,
+    next_render: Instant,
     pub editor_open: bool,
     pub preview_open: bool
 }
@@ -30,6 +34,7 @@ pub enum Message {
     Edit(text_editor::Action),
     OpenFile(PathBuf),
     OpenPreview,
+    RenderDone(Result<(), TypstError>),
 }
 
 impl ContentArea {
@@ -38,25 +43,66 @@ impl ContentArea {
             open_file: None,
             preview_files: vec!(),
             content: text_editor::Content::new(),
+            next_render: Instant::now(),
             editor_open: false,
             preview_open: true,
         }
     }
 
-    pub fn update(&mut self, message: Message, typst: &mut TypstContext) {
+    fn set_render_task(&mut self, typst: &TypstContext) -> Task<Message> {
+        // No file is open so we can't render anything
+        if self.open_file.is_none() {
+            return Task::none();
+        }
+
+        // Debounce
+        let now = Instant::now();
+        if now < self.next_render {
+            return Task::none();
+        }
+        else {
+            let next_render = now.checked_add(Duration::from_secs(SECONDS_BETWEEN_RENDER)).unwrap();
+            self.next_render = next_render;
+        }
+
+        // Render
+        let preview_path = typst.preview_path.clone();
+        let content = self.content.text();
+        let open_file = self.open_file.as_ref().unwrap().clone();
+        Task::perform(
+            TypstContext::compile(preview_path, content, open_file),
+            |result| Message::RenderDone(result)
+        )
+    }
+
+    pub fn update(&mut self, message: Message, typst: &TypstContext) -> Task<Message> {
         match message {
             Message::Edit(action) => {
-                self.render(typst);
                 self.content.perform(action);
+                self.set_render_task(typst)
             }
             Message::OpenFile(filepath) => {
                 let text = fs::read_to_string(filepath).expect("Could not read file");
                 self.content = text_editor::Content::with_text(&text);
                 self.editor_open = true;
+                self.set_render_task(typst)
             }
             Message::OpenPreview => {
                 self.preview_open = true;
-            },
+                self.set_render_task(typst)
+            }
+            Message::RenderDone(result) => {
+                match result {
+                    Err(_) => {} // TODO handle error
+                    Ok(()) => {
+                        match typst.get_preview_files() {
+                            Err(_) => {},
+                            Ok(files) => self.preview_files = files,
+                        }
+                    }
+                }
+                Task::none()
+            }
         }
     }
 
@@ -85,14 +131,8 @@ impl ContentArea {
         .into()
     }
 
-    fn render(&mut self, typst: &mut TypstContext) {
-        // No file is open - so we can't render anything
-        if self.open_file.is_none() {
-            return
-        }
-
-        let open_file = self.open_file.as_ref().unwrap();
-        match typst.render(&self.content.text(), open_file) {
+    fn handle_render_result(&mut self, result: RenderResult) {
+        match result {
             RenderResult::Debounce => (),
             RenderResult::Error(msg) => (), // TODO error handling
             RenderResult::Success(files) => self.preview_files = files,
