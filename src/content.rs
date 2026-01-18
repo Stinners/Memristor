@@ -13,12 +13,14 @@ use iced::widget::{row, Row, text, mouse_area, column, container, rule,
 use iced::widget::container::Style;
 use thiserror::Error;
 
+use crate::error::TypstError;
 use crate::styles;
-use crate::typst::TypstContext;
+use crate::typst::{TypstContext, RenderResult};
 
 pub struct ContentArea {
-    filepath: Option<PathBuf>,
+    open_file: Option<PathBuf>,
     content: text_editor::Content,
+    preview_files: Vec<PathBuf>,
     pub editor_open: bool,
     pub preview_open: bool
 }
@@ -33,16 +35,18 @@ pub enum Message {
 impl ContentArea {
     pub fn new() -> Self {
         ContentArea {
-            filepath: None,
+            open_file: None,
+            preview_files: vec!(),
             content: text_editor::Content::new(),
             editor_open: false,
             preview_open: true,
         }
     }
 
-    pub fn update(&mut self, message: Message) {
+    pub fn update(&mut self, message: Message, typst: &mut TypstContext) {
         match message {
             Message::Edit(action) => {
+                self.render(typst);
                 self.content.perform(action);
             }
             Message::OpenFile(filepath) => {
@@ -81,17 +85,27 @@ impl ContentArea {
         .into()
     }
 
+    fn render(&mut self, typst: &mut TypstContext) {
+        // No file is open - so we can't render anything
+        if self.open_file.is_none() {
+            return
+        }
+
+        let open_file = self.open_file.as_ref().unwrap();
+        match typst.render(&self.content.text(), open_file) {
+            RenderResult::Debounce => (),
+            RenderResult::Error(msg) => (), // TODO error handling
+            RenderResult::Success(files) => self.preview_files = files,
+        }
+    }
+
     // TODO error handling
-    fn preview_view(&self, typst: &TypstContext) -> Element<'_, Message> {
+    fn preview_view(&self) -> Element<'_, Message> {
+
         let mut svgs = column![].clip(false);
-        match typst.get_preview_files() {
-            Err(_) => {}
-            Ok(files) => {
-                for file in files.iter() {
-                    let image = svg(&file);
-                    svgs = svgs.push(image);
-                }
-            }
+        for file in self.preview_files.iter() {
+            let image = svg(&file);
+            svgs = svgs.push(image);
         }
         container( scrollable( svgs ))
         .width(Length::FillPortion(1))
@@ -112,7 +126,7 @@ impl ContentArea {
         }
 
         if self.preview_open {
-            container = container.push(self.preview_view(typst));
+            container = container.push(self.preview_view());
         }
 
         container

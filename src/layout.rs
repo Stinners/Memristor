@@ -104,7 +104,8 @@ impl Layout {
             }
 
             Message::FiletreeMessage(filetree::Message::OpenFile(filepath)) => {
-                self.content.update(content::Message::OpenFile(filepath))
+                self.content.update(content::Message::OpenFile(filepath.clone()), &mut self.typst);
+                self.filetree.update(filetree::Message::OpenFile(filepath));
             }
 
             Message::FiletreeMessage(message) => { self.filetree.update(message) }
@@ -140,7 +141,7 @@ impl Layout {
             Message::HeaderMessage(message) => { todo!() }
 
             Message::ContentAreaMessage(message) => {
-                self.content.update(message);
+                self.content.update(message, &mut self.typst);
             }
         }
     }

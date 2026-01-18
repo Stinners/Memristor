@@ -8,19 +8,28 @@ use std::io::{self, Write};
 use std::path::PathBuf;
 use std::fs::{self, OpenOptions};
 use std::process::{Command, Stdio};
-use std::time::SystemTime;
+use std::time::{SystemTime, Instant, Duration};
 
 use tempdir::TempDir;
 
 use crate::error::{TypstError, FileSystemError};
 
+const SECONDS_BETWEEN_RENDER: u64 = 5;
+
 pub struct TypstContext {
     preview_path: PathBuf,
     temp_dir: TempDir,
+    next_render: Instant,
+}
+
+pub enum RenderResult {
+    Debounce,
+    Success(Vec<PathBuf>),
+    Error(TypstError),
 }
 
 impl TypstContext { 
-    // This should check that typst is installed 
+    // TODO This should check that typst is installed 
     pub fn new() -> Result<Self, TypstError> {
         let temp_dir = TempDir::new("memristor").map_err(|_| {
             TypstError::TempDirError { message: "Couldn't create temporary directory".into() }
@@ -28,7 +37,33 @@ impl TypstContext {
         Ok(TypstContext {
             preview_path: temp_dir.path().join("preview{0p}.svg"),
             temp_dir,
+            next_render: Instant::now(),
         })
+    }
+
+    // This is going to block the UI - we need to have it happen on another thread
+    pub fn render(&mut self, content: &str, open_file: &PathBuf) -> RenderResult {
+        // Debounce render messages
+        let now = Instant::now();
+        if now < self.next_render {
+            return RenderResult::Debounce;
+        }
+
+        let compile_result = self.compile(content, open_file);
+
+        // Update the debounce time
+        let next_render = now.checked_add(Duration::from_secs(SECONDS_BETWEEN_RENDER)).unwrap();
+        self.next_render = next_render;
+
+        if compile_result.is_err() {
+            return RenderResult::Error(compile_result.unwrap_err());
+        }
+
+        // Get the preview files
+        match self.get_preview_files() {
+            Err(err) => RenderResult::Error(TypstError::FilesystemError(err.kind())),
+            Ok(files) => RenderResult::Success(files),
+        }
     }
 
     fn compile(&self, content: &str, open_file: &PathBuf) -> Result<(), TypstError> {
@@ -64,7 +99,7 @@ impl TypstContext {
             if entry.file_type()?.is_file() {
                 let filename: PathBuf = entry.file_name().into();
                 if filename.extension().is_some_and(|ext| ext == "svg") {
-                svgs.push(entry.path());
+                    svgs.push(entry.path());
                 }
             }
         }
@@ -79,6 +114,8 @@ impl TypstContext {
 
         // Only return files with last edited dates which are equal to or earlier 
         // than the first file 
+        // This might not be the best way to do this given the system 
+        // clock isn't montonic 
         let start_date = fs::metadata(&svgs[0])?.modified()?;
 
         let new_files = svgs.into_iter().take_while(|file| {

@@ -1,6 +1,7 @@
 #![allow(dead_code, unused)]
 
 use std::ffi::OsString;
+use std::io;
 
 use thiserror::Error;
 
@@ -21,6 +22,7 @@ pub enum FileSystemError {
 
     #[error("Not Memristor Directory")]
     NotMemristerDirectory,
+
 }
 
 #[derive(Error, Debug, PartialEq)]
@@ -34,5 +36,8 @@ pub enum TypstError {
     CompilationError { message: String },
 
     #[error("Temporary Directory operation failed")]
-    TempDirError { message: String }
+    TempDirError { message: String },
+
+    #[error("Filesystem Error")]
+    FilesystemError(io::ErrorKind),
 }
