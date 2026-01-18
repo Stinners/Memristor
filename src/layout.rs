@@ -1,13 +1,17 @@
 #![allow(dead_code, unused)]
 
+use std::path::PathBuf;
+
 use iced::widget::{text, row, responsive, container, column};
 use iced::widget::pane_grid::{self, PaneGrid, Axis};
 use iced::{Element, Fill, Padding};
+use tempdir::TempDir;
 
 use crate::filetree::{self, FileTree};
 use crate::content::{self, ContentArea};
 use crate::header::{self, MenuHeader, ContentHeader};
 use crate::styles;
+use crate::typst::TypstContext;
 
 #[derive(Debug, Clone)]
 pub enum Message {
@@ -30,6 +34,9 @@ pub struct Layout {
     content: ContentArea,
     menu_header: MenuHeader,
     content_header: ContentHeader,
+
+    // App level data
+    typst: TypstContext,
 }
 
 #[derive(Clone, Copy)]
@@ -41,7 +48,13 @@ const MIN_RATIO: f32 = 0.2;
 const MAX_RATIO: f32 = 0.8;
 
 impl Layout {
+    // TODO: think about how to handle errors when setting up the app
     fn new() -> Self {
+
+        // Init app data
+        let typst = TypstContext::new();
+
+        // Init Panes 
         let (mut panes, pane) = pane_grid::State::new(Pane{id: 0});
         let (content_pane, menu_content_split) = panes.split(Axis::Vertical, pane, Pane{id: 1}).unwrap();
         let menu_pane = Some(pane);
@@ -56,6 +69,7 @@ impl Layout {
             content: ContentArea::new(),
             menu_header: MenuHeader::new(),
             content_header: ContentHeader::new(true),
+            temp_dir: temp_dir,
         }
     }
 
