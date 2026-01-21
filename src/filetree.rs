@@ -7,6 +7,7 @@ use std::path::{Path, PathBuf};
 use iced::{Element, Padding, Length, Color};
 use iced::widget::{row, Column, text, mouse_area, container};
 
+use crate::settings::Settings;
 use crate::components;
 use crate::error::FileSystemError;
 use crate::styles;
@@ -20,7 +21,6 @@ pub struct FileTree {
 pub enum Message {
     ToggleExpandDir(String),
     OpenFile(PathBuf),
-    OpenDir(PathBuf),
 }
 
 fn pathbuf_to_string<'a>(buf: &'a PathBuf) -> Cow<'a, str> {
@@ -28,11 +28,20 @@ fn pathbuf_to_string<'a>(buf: &'a PathBuf) -> Cow<'a, str> {
 }
 
 impl<'a> FileTree {
-    pub fn new() -> Self {
-        let test_dir = PathBuf::from(styles::TEST_DIR);
-        let fs_dir = read_filesystem(&test_dir).unwrap();
+    pub fn new(settings: &Settings) -> Self {
+       let init_dir = match &settings.root_dir {
+           None => None,
+           Some(dir) => {
+               let path = PathBuf::from(dir);
+               match read_filesystem(&path) {
+                   Err(_) => None,
+                   Ok(fs_dir) => Some(fs_dir)
+               }
+           }
+        };
+
         FileTree {
-            root: None,
+            root: init_dir,
             focus_path: None,
         }
     }
@@ -46,9 +55,17 @@ impl<'a> FileTree {
             Message::OpenFile(_) => { 
                 unreachable!("Should be handled in layout");
             },
-            Message::OpenDir(dir_path) => {
-                let fs_dir = read_filesystem(&dir_path).unwrap();
+        }
+    }
+
+    pub fn open_dir(&mut self, dir: PathBuf, settings: &mut Settings) {
+        match read_filesystem(&dir) {
+            Ok(fs_dir) => {
                 self.root = Some(fs_dir);
+                settings.root_dir = Some(dir.to_string_lossy().to_string());
+                settings.write();
+            }
+            Err(_) => {
             }
         }
     }

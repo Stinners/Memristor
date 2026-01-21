@@ -13,7 +13,7 @@ use crate::content::{self, ContentArea};
 use crate::header::{self, MenuHeader, ContentHeader};
 use crate::typst::TypstContext;
 
-use crate::settings::{Settings, ConfigStore};
+use crate::settings::Settings;
 
 #[derive(Debug, Clone)]
 pub enum Message {
@@ -66,7 +66,9 @@ impl Layout {
     fn new() -> Self {
 
         // Init app data
+        let settings = Settings::read().unwrap();
         let typst = TypstContext::new().expect("Couldn't create temporary directory");
+        let filetree = FileTree::new(&settings);
 
         // Init Panes 
         let (mut panes, pane) = pane_grid::State::new(Pane{id: 0});
@@ -76,12 +78,12 @@ impl Layout {
 
         Layout {
             // TODO error handling
-            settings: ConfigStore::init().unwrap().read().unwrap(),
+            settings: settings,
             panes,
             focus: None,
             menu_pane,
             content_pane: content_pane,
-            filetree: FileTree::new(),
+            filetree: filetree,
             content: ContentArea::new(),
             menu_header: MenuHeader::new(),
             content_header: ContentHeader::new(true),
@@ -134,6 +136,13 @@ impl Layout {
 
                     // TODO there must be a better way to do this
                     self.panes.swap(menu_pane, self.content_pane);
+                }
+                Task::none()
+            }
+
+            Message::HeaderMessage(header::Message::OpenDirectory) => {
+                if let Some(dir) = pick_dir() {
+                    self.filetree.open_dir(dir, &mut self.settings);
                 }
                 Task::none()
             }

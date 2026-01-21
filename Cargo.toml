@@ -9,3 +9,8 @@ thiserror = "2.0.17"
 tempdir = "0.3.7"
 rfd = "0.17.1"
 miniserde = "0.1.45"
+
+[profile.release]
+strip = true
+lto = "fat"
+codegen-units = 1

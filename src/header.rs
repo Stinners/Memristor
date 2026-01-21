@@ -80,7 +80,7 @@ impl ContentHeader {
             Message::OpenMenu => { self.menu_open = true },
             Message::ToggleEditor => { self.editor_open != !self.editor_open; },
             Message::TogglePreview => { self.preview_open != self.preview_open; },
-            Message::OpenDirectory => { todo!() }
+            Message::OpenDirectory => { unreachable!("Handled in layout.rs")  }
         }
     }
 

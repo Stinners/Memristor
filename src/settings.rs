@@ -23,66 +23,52 @@ pub enum SettingsError {
     DeserializationError(#[from] Error),
 }
 
-pub struct ConfigStore {
-    dir_path: PathBuf,
-    config_file: PathBuf,
+#[derive(Serialize, Deserialize, Debug)]
+pub struct Settings {
+    pub root_dir: Option<String>
 }
 
-impl ConfigStore {
-    pub fn init() -> Result<ConfigStore, SettingsError> {
-        // Init config dir
-        let mut config = get_config_dir()?;
-        if !(Path::new(&config)).exists() {
-            fs::create_dir_all(&config)?;
+impl Settings {
+    fn default() -> Self {
+        Settings {
+            root_dir: None,
         }
+    }
 
-        // Init config File
-        let config_file_path = config.join(CONFIG_FILE);
+    fn config_path() -> Result<PathBuf, SettingsError> {
+        let mut config_dir_path = env::home_dir().ok_or(
+            io::Error::new(io::ErrorKind::NotFound, "Couldn't get Home directory")
+        )?;
+        config_dir_path.push(CONFIG_DIR);
+
+        if !(Path::new(&config_dir_path)).exists() {
+            fs::create_dir_all(&config_dir_path).map_err(|err| SettingsError::CouldNotGetConfigDir(err))?;
+        };
+
+        let config_file_path = config_dir_path.join(CONFIG_FILE);
         if !(Path::new(&config_file_path)).exists() {
             let mut config_file = fs::File::create_new(&config_file_path)?;
             let settings_text = json::to_string(&Settings::default());
             config_file.write_all(settings_text.as_bytes())?
         }
-        Ok(ConfigStore {
-            dir_path: config,
-            config_file: config_file_path,
-        })
+        Ok(config_file_path)
     }
 
-    pub fn read(&self) -> Result<Settings, SettingsError> {
-        dbg!(&self.config_file);
-        let file_contents = fs::read_to_string(&self.config_file)?;
+    pub fn write(&self) -> Result<(), SettingsError> {
+        let config_file_path = Self::config_path()?;
+        let mut file = fs::OpenOptions::new()
+            .write(true)
+            .truncate(true)
+            .open(config_file_path)?;
+        file.write_all(json::to_string(self).as_bytes());
+        Ok(())
+    }
+
+    pub fn read() -> Result<Settings, SettingsError> {
+        let config_file_path = Self::config_path()?;
+        let file_contents = fs::read_to_string(&config_file_path)?;
         let config: Settings = json::from_str(&file_contents)?;
         Ok(config)
     }
 
-    pub fn write(&self, settings: &Settings) -> Result<(), SettingsError> {
-        let mut file = fs::OpenOptions::new()
-            .write(true)
-            .truncate(true)
-            .open(&self.config_file)?;
-        file.write_all(json::to_string(settings).as_bytes());
-        Ok(())
-    }
-}
-
-#[derive(Serialize, Deserialize, Debug)]
-pub struct Settings {
-    root_dir: Option<String>
-}
-
-impl Settings {
-    pub fn default() -> Self {
-        Settings {
-            root_dir: None,
-        }
-    }
-}
-
-fn get_config_dir() -> Result<PathBuf, SettingsError> {
-    let mut config = env::home_dir().ok_or(
-        io::Error::new(io::ErrorKind::NotFound, "Couldn't get Home directory")
-    )?;
-    config.push(CONFIG_DIR);
-    Ok(config)
 }
